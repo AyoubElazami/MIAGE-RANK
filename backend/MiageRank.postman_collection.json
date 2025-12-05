@@ -1,0 +1,268 @@
+{
+	"info": {
+		"name": "MiageRank API",
+		"description": "Collection complète pour tester l'API MiageRank",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:4000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Authentification",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('token', response.token);",
+									"    console.log('Token sauvegardé');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Admin User\",\n  \"email\": \"admin@miagerank.com\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set('token', response.token);",
+									"    console.log('Token sauvegardé');",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@miagerank.com\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Équipes",
+			"item": [
+				{
+					"name": "Créer une équipe",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Équipe Alpha\",\n  \"description\": \"La meilleure équipe\",\n  \"color\": \"#3B82F6\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/teams",
+							"host": ["{{base_url}}"],
+							"path": ["api", "teams"]
+						}
+					}
+				},
+				{
+					"name": "Liste des équipes",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/teams?page=1&limit=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "teams"],
+							"query": [
+								{"key": "page", "value": "1"},
+								{"key": "limit", "value": "10"}
+							]
+						}
+					}
+				},
+				{
+					"name": "Détails d'une équipe",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/teams/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "teams", "1"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Défis",
+			"item": [
+				{
+					"name": "Créer un défi",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{token}}"}]
+						},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Défi Innovation\",\n  \"description\": \"Créer une solution innovante\",\n  \"category\": \"innovation\",\n  \"points\": 100,\n  \"difficulty\": \"difficile\",\n  \"startDate\": \"2024-01-01T00:00:00.000Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/challenges",
+							"host": ["{{base_url}}"],
+							"path": ["api", "challenges"]
+						}
+					}
+				},
+				{
+					"name": "Liste des défis",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/challenges",
+							"host": ["{{base_url}}"],
+							"path": ["api", "challenges"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Scores",
+			"item": [
+				{
+					"name": "Soumettre un score",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{token}}"}]
+						},
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"challengeId\": 1,\n  \"teamId\": 1,\n  \"points\": 85,\n  \"bonus\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/scores/submit",
+							"host": ["{{base_url}}"],
+							"path": ["api", "scores", "submit"]
+						}
+					}
+				},
+				{
+					"name": "Valider un score",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{"key": "token", "value": "{{token}}"}]
+						},
+						"method": "PUT",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"validated\",\n  \"notes\": \"Score validé\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/scores/1/validate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "scores", "1", "validate"]
+						}
+					}
+			]
+		},
+		{
+			"name": "5. Classements",
+			"item": [
+				{
+					"name": "Classement général",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/ranking",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ranking"]
+						}
+					}
+				},
+				{
+					"name": "Statistiques",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/ranking/statistics",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ranking", "statistics"]
+						}
+					}
+				}
+			]
+		}
+	]
+}
+
