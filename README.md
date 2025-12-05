@@ -1,6 +1,6 @@
 # MiageRank - Système de Gamification
 
-Application web de gestion de compétitions, défis et classements d'équipes avec système multi-admin.
+Application web de gestion de compétitions, défis et classements d'équipes avec système multi-admin.__
 
 ## Technologies
 
@@ -8,7 +8,7 @@ Application web de gestion de compétitions, défis et classements d'équipes av
 **Backend:** Node.js, Express, Sequelize, MySQL, Socket.io, JWT  
 **Infrastructure:** AWS S3 (Frontend), AWS EC2 (Backend), AWS RDS (MySQL)
 
-## Installation
+## Installation env
 
 ### Backend
 ```bash
