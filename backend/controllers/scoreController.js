@@ -1,26 +1,19 @@
 const { Score, Team, Challenge, User } = require("../models");
 const { Op } = require("sequelize");
 const { Sequelize } = require("sequelize");
-
-// Soumettre un score pour un défi
 const submitScore = async (req, res) => {
     try {
         const { challengeId, teamId, points, bonus, notes, workSubmission, workFiles } = req.body;
         const userId = req.user.id;
-
-        // Vérifier que l'utilisateur appartient à l'équipe
         const teamMember = await require("../models/TeamMember").findOne({
             where: { TeamId: teamId, UserId: userId }
         });
-
         if (!teamMember) {
             return res.status(403).json({
                 success: false,
                 message: "Vous n'appartenez pas à cette équipe"
             });
         }
-
-        // Vérifier que le défi existe et est actif
         const challenge = await Challenge.findByPk(challengeId);
         if (!challenge || !challenge.isActive) {
             return res.status(400).json({
@@ -28,21 +21,16 @@ const submitScore = async (req, res) => {
                 message: "Défi non trouvé ou inactif"
             });
         }
-
-        // Vérifier si un score existe déjà pour cette équipe et ce défi
         const existingScore = await Score.findOne({
             where: { TeamId: teamId, ChallengeId: challengeId }
         });
-
         if (existingScore) {
             return res.status(400).json({
                 success: false,
                 message: "Un score a déjà été soumis pour ce défi"
             });
         }
-
         const totalPoints = (points || 0) + (bonus || 0);
-
         const score = await Score.create({
             TeamId: teamId,
             ChallengeId: challengeId,
@@ -54,7 +42,6 @@ const submitScore = async (req, res) => {
             workSubmission: workSubmission || null,
             workFiles: workFiles || null
         });
-
         const scoreWithDetails = await Score.findByPk(score.id, {
             include: [
                 {
@@ -69,7 +56,6 @@ const submitScore = async (req, res) => {
                 }
             ]
         });
-
         res.status(201).json({
             success: true,
             message: "Score soumis avec succès",
@@ -83,30 +69,24 @@ const submitScore = async (req, res) => {
         });
     }
 };
-
-// Valider ou rejeter un score
 const validateScore = async (req, res) => {
     try {
         const { id } = req.params;
         const { status, notes } = req.body;
         const userId = req.user.id;
-
         console.log("validateScore - id:", id, "status:", status, "userId:", userId, "body:", req.body);
-
         if (!status) {
             return res.status(400).json({
                 success: false,
                 message: "Le statut est requis"
             });
         }
-
         if (!["validated", "rejected"].includes(status)) {
             return res.status(400).json({
                 success: false,
                 message: "Statut invalide (validated ou rejected)"
             });
         }
-
         const score = await Score.findByPk(id, {
             include: [
                 {
@@ -120,23 +100,18 @@ const validateScore = async (req, res) => {
                 }
             ]
         });
-
         if (!score) {
             return res.status(404).json({
                 success: false,
                 message: "Score non trouvé"
             });
         }
-
         if (score.status !== "pending") {
             return res.status(400).json({
                 success: false,
                 message: "Ce score a déjà été traité"
             });
         }
-
-        // Vérifier que l'admin est le créateur du défi
-        // Si createdBy est null, permettre à tous les admins de valider (pour les anciens défis)
         if (score.challenge.createdBy !== null && score.challenge.createdBy !== undefined) {
             if (score.challenge.createdBy !== userId) {
                 return res.status(403).json({
@@ -145,7 +120,6 @@ const validateScore = async (req, res) => {
                 });
             }
         } else {
-            // Si createdBy est null, vérifier que l'utilisateur est admin
             if (req.user.role !== 'admin') {
                 return res.status(403).json({
                     success: false,
@@ -153,29 +127,20 @@ const validateScore = async (req, res) => {
                 });
             }
         }
-
         const updateData = {
             status,
             validatedBy: userId,
             validatedAt: new Date()
         };
-
         if (notes) {
             updateData.notes = notes;
         }
-
         await score.update(updateData);
-
-        // Si le score est validé, mettre à jour le total de l'équipe
         if (status === "validated") {
             await updateTeamTotalScore(score.TeamId);
-            
-            // Émettre des événements Socket.io pour les mises à jour en temps réel
             const io = req.app.get("io");
             if (io) {
                 const { emitRankingUpdate, emitTeamUpdate, emitChallengeUpdate, emitNotification } = require("../services/socketService");
-                
-                // Mettre à jour l'équipe
                 const team = await Team.findByPk(score.TeamId, {
                     include: [
                         {
@@ -189,18 +154,11 @@ const validateScore = async (req, res) => {
                 if (team) {
                     emitTeamUpdate(team.id, team);
                 }
-                
-                // Mettre à jour le défi
                 emitChallengeUpdate(score.ChallengeId, updatedScore.challenge);
-                
-                // Notification générale
                 emitNotification(`Score validé pour ${team?.name || "l'équipe"} - ${updatedScore.totalPoints} points`, "success");
-                
-                // Émettre un événement pour forcer la mise à jour du classement
                 io.to("ranking").emit("ranking:refresh");
             }
         }
-
         const updatedScore = await Score.findByPk(id, {
             include: [
                 {
@@ -220,7 +178,6 @@ const validateScore = async (req, res) => {
                 }
             ]
         });
-
         res.status(200).json({
             success: true,
             message: `Score ${status === "validated" ? "validé" : "rejeté"} avec succès`,
@@ -234,8 +191,6 @@ const validateScore = async (req, res) => {
         });
     }
 };
-
-// Fonction helper pour mettre à jour le total de l'équipe
 const updateTeamTotalScore = async (teamId) => {
     const totalScore = await Score.sum("totalPoints", {
         where: {
@@ -243,36 +198,27 @@ const updateTeamTotalScore = async (teamId) => {
             status: "validated"
         }
     });
-
     await Team.update(
         { totalScore: totalScore || 0 },
         { where: { id: teamId } }
     );
-
-    // Mettre à jour les rangs
     await updateRankings();
 };
-
-// Mettre à jour les rangs de toutes les équipes
 const updateRankings = async () => {
     const teams = await Team.findAll({
         where: { isActive: true },
         order: [["totalScore", "DESC"], ["id", "ASC"]]
     });
-
     for (let i = 0; i < teams.length; i++) {
         await teams[i].update({ rank: i + 1 });
     }
 };
-
-// Récupérer tous les scores
 const getScores = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
         const { status, teamId, challengeId } = req.query;
-
         const where = {};
         if (status) {
             where.status = status;
@@ -283,7 +229,6 @@ const getScores = async (req, res) => {
         if (challengeId) {
             where.ChallengeId = challengeId;
         }
-
         const { count, rows: scores } = await Score.findAndCountAll({
             where,
             limit,
@@ -308,7 +253,6 @@ const getScores = async (req, res) => {
                 }
             ]
         });
-
         res.status(200).json({
             success: true,
             data: scores,
@@ -327,8 +271,6 @@ const getScores = async (req, res) => {
         });
     }
 };
-
-// Récupérer les participations aux défis créés par l'admin connecté
 const getMyChallengeScores = async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
@@ -337,20 +279,15 @@ const getMyChallengeScores = async (req, res) => {
                 message: "Accès refusé. Administrateur requis."
             });
         }
-
         const { status, challengeId } = req.query;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const offset = (page - 1) * limit;
-
-        // Récupérer les IDs des défis créés par cet admin
         const myChallenges = await Challenge.findAll({
             where: { createdBy: req.user.id },
             attributes: ['id']
         });
-
         const myChallengeIds = myChallenges.map(c => c.id);
-
         if (myChallengeIds.length === 0) {
             return res.status(200).json({
                 success: true,
@@ -363,15 +300,12 @@ const getMyChallengeScores = async (req, res) => {
                 }
             });
         }
-
         const where = {
             ChallengeId: challengeId ? parseInt(challengeId) : { [require("sequelize").Op.in]: myChallengeIds }
         };
-
         if (status) {
             where.status = status;
         }
-
         const { count, rows: scores } = await Score.findAndCountAll({
             where,
             limit,
@@ -403,7 +337,6 @@ const getMyChallengeScores = async (req, res) => {
                 }
             ]
         });
-
         res.status(200).json({
             success: true,
             data: scores,
@@ -422,12 +355,9 @@ const getMyChallengeScores = async (req, res) => {
         });
     }
 };
-
-// Récupérer un score par ID
 const getScoreById = async (req, res) => {
     try {
         const { id } = req.params;
-
         const score = await Score.findByPk(id, {
             include: [
                 {
@@ -456,14 +386,12 @@ const getScoreById = async (req, res) => {
                 }
             ]
         });
-
         if (!score) {
             return res.status(404).json({
                 success: false,
                 message: "Score non trouvé"
             });
         }
-
         res.status(200).json({
             success: true,
             data: score
@@ -476,13 +404,10 @@ const getScoreById = async (req, res) => {
         });
     }
 };
-
-// Mettre à jour un score (avant validation, pour ajuster les points)
 const updateScore = async (req, res) => {
     try {
         const { id } = req.params;
         const { points, bonus } = req.body;
-
         const score = await Score.findByPk(id, {
             include: [
                 {
@@ -491,38 +416,30 @@ const updateScore = async (req, res) => {
                 }
             ]
         });
-
         if (!score) {
             return res.status(404).json({
                 success: false,
                 message: "Score non trouvé"
             });
         }
-
-        // Vérifier que seul le créateur du défi peut modifier
         if (score.challenge.createdBy && score.challenge.createdBy !== req.user.id) {
             return res.status(403).json({
                 success: false,
                 message: "Vous n'êtes pas autorisé à modifier ce score"
             });
         }
-
-        // Ne peut modifier que si en attente
         if (score.status !== 'pending') {
             return res.status(400).json({
                 success: false,
                 message: "Le score a déjà été traité, impossible de le modifier"
             });
         }
-
         const totalPoints = (points || score.points) + (bonus || score.bonus || 0);
-
         await score.update({
             points: points !== undefined ? points : score.points,
             bonus: bonus !== undefined ? bonus : score.bonus,
             totalPoints
         });
-
         const updatedScore = await Score.findByPk(id, {
             include: [
                 {
@@ -537,7 +454,6 @@ const updateScore = async (req, res) => {
                 }
             ]
         });
-
         res.status(200).json({
             success: true,
             message: "Score mis à jour avec succès",
@@ -551,7 +467,6 @@ const updateScore = async (req, res) => {
         });
     }
 };
-
 module.exports = {
     submitScore,
     validateScore,
@@ -562,4 +477,3 @@ module.exports = {
     updateTeamTotalScore,
     updateRankings
 };
-

@@ -1,6 +1,5 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
-
 const TeamMember = sequelize.define("TeamMember", {
     id: {
         type: DataTypes.INTEGER,
@@ -25,8 +24,4 @@ const TeamMember = sequelize.define("TeamMember", {
         { fields: ['role'] }
     ]
 });
-
-// La synchronisation se fait dans models/index.js pour respecter l'ordre des dépendances
-
 module.exports = TeamMember;
-

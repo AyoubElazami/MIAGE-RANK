@@ -3,30 +3,24 @@ const Team = require("../models/Team");
 const Challenge = require("../models/Challenge");
 const Score = require("../models/Score");
 const bcrypt = require("bcrypt");
-
-// Dashboard admin - Statistiques générales
 const getAdminDashboard = async (req, res) => {
     try {
-        // Fonction helper pour gérer les erreurs individuellement
         const safeCount = async (model, where = {}) => {
             try {
                 return await model.count({ where });
             } catch (error) {
                 console.error(`Erreur lors du count de ${model.name}:`, error.message);
-                return 0; // Retourner 0 en cas d'erreur
+                return 0;
             }
         };
-
         const safeFindAll = async (model, options = {}) => {
             try {
                 return await model.findAll(options);
             } catch (error) {
                 console.error(`Erreur lors du findAll de ${model.name}:`, error.message);
-                return []; // Retourner un tableau vide en cas d'erreur
+                return [];
             }
         };
-
-        // Récupérer les statistiques avec gestion d'erreur individuelle
         const [totalUsers, totalAdmins, totalRegularUsers, totalTeams, totalChallenges, totalScores, pendingScores] = await Promise.all([
             safeCount(User),
             safeCount(User, { role: 'admin' }),
@@ -36,15 +30,11 @@ const getAdminDashboard = async (req, res) => {
             safeCount(Score, { status: 'validated' }),
             safeCount(Score, { status: 'pending' })
         ]);
-
-        // Derniers utilisateurs créés
         const recentUsers = await safeFindAll(User, {
             attributes: { exclude: ['password'] },
             order: [['created_at', 'DESC']],
             limit: 5
         });
-
-        // Derniers scores en attente
         const recentPendingScores = await safeFindAll(Score, {
             where: { status: 'pending' },
             include: [
@@ -64,7 +54,6 @@ const getAdminDashboard = async (req, res) => {
             order: [['created_at', 'DESC']],
             limit: 5
         });
-
         res.status(200).json({
             success: true,
             data: {
@@ -99,21 +88,15 @@ const getAdminDashboard = async (req, res) => {
         });
     }
 };
-
-// Créer un utilisateur (admin uniquement)
 const createUserByAdmin = async (req, res) => {
     try {
         const { name, email, password, role, team_id } = req.body;
-
-        // Vérifier que tous les champs requis sont remplis
         if (!name || !email || !password) {
             return res.status(400).json({
                 success: false,
                 message: "Les champs name, email et password sont requis"
             });
         }
-
-        // Vérifier si l'utilisateur existe déjà
         const existingUser = await User.findOne({ where: { email } });
         if (existingUser) {
             return res.status(409).json({
@@ -121,16 +104,12 @@ const createUserByAdmin = async (req, res) => {
                 message: "Cet email est déjà utilisé"
             });
         }
-
-        // Vérifier que le rôle est valide
         if (role && !['admin', 'user'].includes(role)) {
             return res.status(400).json({
                 success: false,
                 message: "Le rôle doit être 'admin' ou 'user'"
             });
         }
-
-        // Vérifier que team_id existe si fourni
         if (team_id) {
             const team = await Team.findByPk(team_id);
             if (!team) {
@@ -140,12 +119,8 @@ const createUserByAdmin = async (req, res) => {
                 });
             }
         }
-
-        // Hasher le mot de passe
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-        // Créer l'utilisateur
         const user = await User.create({
             name,
             email,
@@ -153,8 +128,6 @@ const createUserByAdmin = async (req, res) => {
             role: role || 'user',
             team_id: team_id || null
         });
-
-        // Retourner l'utilisateur sans le mot de passe
         res.status(201).json({
             success: true,
             message: "Utilisateur créé avec succès",
@@ -175,20 +148,16 @@ const createUserByAdmin = async (req, res) => {
         });
     }
 };
-
-// Modifier le rôle d'un utilisateur (admin uniquement)
 const updateUserRole = async (req, res) => {
     try {
         const { id } = req.params;
         const { role } = req.body;
-
         if (!role || !['admin', 'user'].includes(role)) {
             return res.status(400).json({
                 success: false,
                 message: "Le rôle doit être 'admin' ou 'user'"
             });
         }
-
         const user = await User.findByPk(id);
         if (!user) {
             return res.status(404).json({
@@ -196,17 +165,13 @@ const updateUserRole = async (req, res) => {
                 message: "Utilisateur non trouvé"
             });
         }
-
-        // Empêcher de modifier son propre rôle
         if (req.user.id === parseInt(id)) {
             return res.status(400).json({
                 success: false,
                 message: "Vous ne pouvez pas modifier votre propre rôle"
             });
         }
-
         await user.update({ role });
-
         res.status(200).json({
             success: true,
             message: "Rôle de l'utilisateur mis à jour avec succès",
@@ -225,13 +190,10 @@ const updateUserRole = async (req, res) => {
         });
     }
 };
-
-// Assigner un utilisateur à une équipe (admin uniquement)
 const assignUserToTeam = async (req, res) => {
     try {
         const { id } = req.params;
         const { team_id } = req.body;
-
         const user = await User.findByPk(id);
         if (!user) {
             return res.status(404).json({
@@ -239,7 +201,6 @@ const assignUserToTeam = async (req, res) => {
                 message: "Utilisateur non trouvé"
             });
         }
-
         if (team_id) {
             const team = await Team.findByPk(team_id);
             if (!team) {
@@ -249,9 +210,7 @@ const assignUserToTeam = async (req, res) => {
                 });
             }
         }
-
         await user.update({ team_id: team_id || null });
-
         res.status(200).json({
             success: true,
             message: team_id ? "Utilisateur assigné à l'équipe avec succès" : "Utilisateur retiré de l'équipe avec succès",
@@ -270,11 +229,9 @@ const assignUserToTeam = async (req, res) => {
         });
     }
 };
-
 module.exports = {
     getAdminDashboard,
     createUserByAdmin,
     updateUserRole,
     assignUserToTeam
 };
-

@@ -3,8 +3,6 @@ const sequelize = require("../config/db");
 const User = require("../models/User");
 const Challenge = require("../models/Challenge");
 const bcrypt = require("bcrypt");
-
-// Liste de 20 admins avec leurs défis (1-2 défis par admin)
 const adminsData = [
     {
         admin: {
@@ -477,34 +475,25 @@ const adminsData = [
         ]
     }
 ];
-
 async function addAdminsAndChallenges() {
     try {
         await sequelize.authenticate();
         console.log("✅ Connexion à la base de données réussie!");
-
-        // Synchroniser les modèles
         await User.sync({ alter: true });
         await Challenge.sync({ alter: true });
         console.log("✅ Modèles synchronisés!");
-
         let adminsCreated = 0;
         let challengesCreated = 0;
         let adminsSkipped = 0;
         let challengesSkipped = 0;
-
         for (const adminData of adminsData) {
             try {
-                // Vérifier si l'admin existe déjà
                 let admin = await User.findOne({
                     where: { email: adminData.admin.email }
                 });
-
                 if (!admin) {
-                    // Créer l'admin
                     const saltRounds = 10;
                     const hashedPassword = await bcrypt.hash(adminData.admin.password, saltRounds);
-                    
                     admin = await User.create({
                         name: adminData.admin.name,
                         email: adminData.admin.email,
@@ -517,8 +506,6 @@ async function addAdminsAndChallenges() {
                     adminsSkipped++;
                     console.log(`⏭️  Admin déjà existant: ${adminData.admin.name}`);
                 }
-
-                // Créer les défis pour cet admin
                 for (const challengeData of adminData.challenges) {
                     try {
                         const existing = await Challenge.findOne({
@@ -527,7 +514,6 @@ async function addAdminsAndChallenges() {
                                 createdBy: admin.id
                             }
                         });
-
                         if (!existing) {
                             await Challenge.create({
                                 ...challengeData,
@@ -547,22 +533,18 @@ async function addAdminsAndChallenges() {
                 console.error(`❌ Erreur pour l'admin "${adminData.admin.name}":`, error.message);
             }
         }
-
         console.log("\n📊 Résumé:");
         console.log(`✅ ${adminsCreated} admins créés`);
         console.log(`⏭️  ${adminsSkipped} admins déjà existants`);
         console.log(`✅ ${challengesCreated} défis créés`);
         console.log(`⏭️  ${challengesSkipped} défis déjà existants`);
         console.log(`📝 Total: ${adminsData.length} admins traités`);
-
-        // Afficher les statistiques par admin
         console.log("\n📈 Statistiques par admin:");
         const allAdmins = await User.findAll({ where: { role: 'admin' } });
         for (const admin of allAdmins) {
             const challengeCount = await Challenge.count({ where: { createdBy: admin.id } });
             console.log(`   ${admin.name}: ${challengeCount} défis`);
         }
-
         console.log("\n🎉 Script terminé avec succès!");
         process.exit(0);
     } catch (error) {
@@ -570,6 +552,4 @@ async function addAdminsAndChallenges() {
         process.exit(1);
     }
 }
-
 addAdminsAndChallenges();
-

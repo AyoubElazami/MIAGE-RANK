@@ -1,0 +1,12 @@
+INFORMATIONS RDS - À CONSERVER EN SÉCURITÉ
+
+Endpoint: miagerank-db.c74s2aykmqbd.eu-west-3.rds.amazonaws.com
+Port: 3306
+Username: admin
+Password: [VOTRE MOT DE PASSE - À REMPLIR]
+Database: miagerank
+Security Group: sg-06a24ce3c839288ce
+Région: eu-west-3
+
+⚠️ IMPORTANT: Notez votre mot de passe RDS ici (ou dans un gestionnaire de mots de passe sécurisé)
+

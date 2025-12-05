@@ -1,6 +1,4 @@
 const { body, param, query, validationResult } = require("express-validator");
-
-// Middleware pour gérer les erreurs de validation
 const handleValidationErrors = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -12,8 +10,6 @@ const handleValidationErrors = (req, res, next) => {
     }
     next();
 };
-
-// Validations pour les équipes
 const validateTeam = [
     body("name")
         .trim()
@@ -30,8 +26,6 @@ const validateTeam = [
         .withMessage("La couleur doit être au format hexadécimal (#RRGGBB)"),
     handleValidationErrors
 ];
-
-// Validations pour les défis
 const validateChallenge = [
     body("title")
         .trim()
@@ -60,8 +54,6 @@ const validateChallenge = [
         .withMessage("Date de fin invalide"),
     handleValidationErrors
 ];
-
-// Validations pour les scores
 const validateScore = [
     body("points")
         .isInt({ min: 0 })
@@ -77,7 +69,6 @@ const validateScore = [
         .withMessage("Les notes ne peuvent pas dépasser 500 caractères"),
     handleValidationErrors
 ];
-
 const validateScoreValidation = [
     body("status")
         .isIn(["validated", "rejected"])
@@ -89,16 +80,12 @@ const validateScoreValidation = [
         .withMessage("Les notes ne peuvent pas dépasser 1000 caractères"),
     handleValidationErrors
 ];
-
-// Validations pour les paramètres ID
 const validateId = [
     param("id")
         .isInt({ min: 1 })
         .withMessage("L'ID doit être un entier positif"),
     handleValidationErrors
 ];
-
-// Validations pour les query params
 const validatePagination = [
     query("page")
         .optional()
@@ -110,7 +97,6 @@ const validatePagination = [
         .withMessage("La limite doit être entre 1 et 100"),
     handleValidationErrors
 ];
-
 module.exports = {
     validateTeam,
     validateChallenge,
@@ -120,4 +106,3 @@ module.exports = {
     validatePagination,
     handleValidationErrors
 };
-

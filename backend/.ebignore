@@ -1,0 +1,49 @@
+# Elastic Beanstalk ignore file
+# Exclure les fichiers inutiles du déploiement
+
+# Dependencies
+node_modules/
+npm-debug.log
+package-lock.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Documentation
+*.md
+!README.md
+
+# Scripts de développement
+scripts/kill-port.*
+scripts/*.bat
+scripts/*.ps1
+
+# Tests
+test/
+tests/
+*.test.js
+*.spec.js
+
+# Git
+.git/
+.gitignore
+
+# Autres
+*.postman_collection.json

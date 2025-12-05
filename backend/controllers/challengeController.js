@@ -1,14 +1,11 @@
 const { Challenge, Score, Team, User } = require("../models");
 const { Op } = require("sequelize");
-
-// Récupérer tous les défis
 const getChallenges = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
         const { category, isActive, difficulty } = req.query;
-
         const where = {};
         if (category) {
             where.category = category;
@@ -19,8 +16,6 @@ const getChallenges = async (req, res) => {
         if (difficulty) {
             where.difficulty = difficulty;
         }
-
-        // Essayer d'abord avec l'include creator, sinon sans
         let challenges, count;
         try {
             const result = await Challenge.findAndCountAll({
@@ -53,7 +48,6 @@ const getChallenges = async (req, res) => {
             challenges = result.rows;
             count = result.count;
         } catch (includeError) {
-            // Si l'include creator échoue (colonne createdBy n'existe pas), essayer sans
             console.warn("Include creator échoué, tentative sans creator:", includeError.message);
             const result = await Challenge.findAndCountAll({
                 where,
@@ -79,7 +73,6 @@ const getChallenges = async (req, res) => {
             challenges = result.rows;
             count = result.count;
         }
-
         res.status(200).json({
             success: true,
             data: challenges,
@@ -101,12 +94,9 @@ const getChallenges = async (req, res) => {
         });
     }
 };
-
-// Récupérer un défi par ID
 const getChallengeById = async (req, res) => {
     try {
         const { id } = req.params;
-
         const challenge = await Challenge.findByPk(id, {
             include: [
                 {
@@ -131,14 +121,12 @@ const getChallengeById = async (req, res) => {
                 }
             ]
         });
-
         if (!challenge) {
             return res.status(404).json({
                 success: false,
                 message: "Défi non trouvé"
             });
         }
-
         res.status(200).json({
             success: true,
             data: challenge
@@ -154,25 +142,19 @@ const getChallengeById = async (req, res) => {
         });
     }
 };
-
-// Créer un nouveau défi
 const createChallenge = async (req, res) => {
     try {
-        // Seuls les admins peuvent créer des défis
         if (req.user.role !== 'admin') {
             return res.status(403).json({
                 success: false,
                 message: "Seuls les administrateurs peuvent créer des défis"
             });
         }
-
         const challengeData = {
             ...req.body,
-            createdBy: req.user.id // L'admin qui crée devient le propriétaire
+            createdBy: req.user.id
         };
-
         const challenge = await Challenge.create(challengeData);
-
         const challengeWithCreator = await Challenge.findByPk(challenge.id, {
             include: [
                 {
@@ -182,7 +164,6 @@ const createChallenge = async (req, res) => {
                 }
             ]
         });
-
         res.status(201).json({
             success: true,
             message: "Défi créé avec succès",
@@ -196,8 +177,6 @@ const createChallenge = async (req, res) => {
         });
     }
 };
-
-// Récupérer les défis créés par l'admin connecté
 const getMyChallenges = async (req, res) => {
     try {
         if (req.user.role !== 'admin') {
@@ -206,12 +185,9 @@ const getMyChallenges = async (req, res) => {
                 message: "Accès refusé. Administrateur requis."
             });
         }
-
-        // Récupérer les défis créés par cet admin
         console.log("getMyChallenges - Recherche des défis pour admin ID:", req.user.id, "Email:", req.user.email);
         let challenges = [];
         try {
-            // Utiliser Op.eq pour être explicite sur la comparaison
             challenges = await Challenge.findAll({
                 where: { 
                     createdBy: req.user.id
@@ -227,35 +203,26 @@ const getMyChallenges = async (req, res) => {
                 ]
             });
             console.log(`Trouvé ${challenges.length} défis pour l'admin ${req.user.id} (${req.user.email})`);
-            
-            // Debug: afficher les IDs des défis trouvés
             if (challenges.length > 0) {
                 console.log("IDs des défis trouvés:", challenges.map(c => c.id).join(", "));
             }
         } catch (err) {
             console.error("Erreur lors de la récupération des défis:", err.message);
             console.error("Stack:", err.stack);
-            // Si la requête échoue, retourner un tableau vide plutôt qu'une erreur
             return res.status(200).json({
                 success: true,
                 data: []
             });
         }
-
-        // Compter les participations pour chaque défi (séparément pour éviter les erreurs)
         const challengesWithScores = [];
-        
         for (const challenge of challenges) {
             try {
-                // Vérifier que le défi appartient bien à cet admin
                 if (challenge.createdBy !== null && challenge.createdBy !== undefined && challenge.createdBy !== req.user.id) {
                     console.log(`Défi ${challenge.id} ignoré: createdBy=${challenge.createdBy}, userId=${req.user.id}`);
-                    continue; // Ignorer ce défi
+                    continue;
                 }
-
                 let scoresCount = 0;
                 let pendingCount = 0;
-                
                 try {
                     scoresCount = await Score.count({
                         where: { ChallengeId: challenge.id }
@@ -263,7 +230,6 @@ const getMyChallenges = async (req, res) => {
                 } catch (err) {
                     console.error(`Erreur count scores pour défi ${challenge.id}:`, err.message);
                 }
-                
                 try {
                     pendingCount = await Score.count({
                         where: { ChallengeId: challenge.id, status: 'pending' }
@@ -271,7 +237,6 @@ const getMyChallenges = async (req, res) => {
                 } catch (err) {
                     console.error(`Erreur count pending pour défi ${challenge.id}:`, err.message);
                 }
-                
                 const challengeData = challenge.toJSON ? challenge.toJSON() : challenge;
                 challengesWithScores.push({
                     ...challengeData,
@@ -281,7 +246,6 @@ const getMyChallenges = async (req, res) => {
             } catch (error) {
                 console.error(`Erreur lors du traitement du défi ${challenge.id}:`, error.message);
                 console.error("Stack:", error.stack);
-                // Ajouter quand même le défi avec des compteurs à 0
                 try {
                     const challengeData = challenge.toJSON ? challenge.toJSON() : challenge;
                     challengesWithScores.push({
@@ -294,16 +258,12 @@ const getMyChallenges = async (req, res) => {
                 }
             }
         }
-
         console.log(`Retour de ${challengesWithScores.length} défis avec scores`);
-        
-        // Debug: afficher les titres des défis retournés
         if (challengesWithScores.length > 0) {
             console.log("Titres des défis retournés:", challengesWithScores.map(c => c.title).join(", "));
         } else {
             console.log("⚠️  Aucun défi trouvé pour cet admin. Vérifiez que createdBy correspond à l'ID de l'admin.");
         }
-
         res.status(200).json({
             success: true,
             data: challengesWithScores
@@ -318,13 +278,10 @@ const getMyChallenges = async (req, res) => {
         });
     }
 };
-
-// Mettre à jour un défi
 const updateChallenge = async (req, res) => {
     try {
         const { id } = req.params;
         const updateData = req.body;
-
         const challenge = await Challenge.findByPk(id);
         if (!challenge) {
             return res.status(404).json({
@@ -332,9 +289,7 @@ const updateChallenge = async (req, res) => {
                 message: "Défi non trouvé"
             });
         }
-
         await challenge.update(updateData);
-
         res.status(200).json({
             success: true,
             message: "Défi mis à jour avec succès",
@@ -348,12 +303,9 @@ const updateChallenge = async (req, res) => {
         });
     }
 };
-
-// Supprimer un défi
 const deleteChallenge = async (req, res) => {
     try {
         const { id } = req.params;
-
         const challenge = await Challenge.findByPk(id);
         if (!challenge) {
             return res.status(404).json({
@@ -361,9 +313,7 @@ const deleteChallenge = async (req, res) => {
                 message: "Défi non trouvé"
             });
         }
-
         await challenge.destroy();
-
         res.status(200).json({
             success: true,
             message: "Défi supprimé avec succès"
@@ -376,13 +326,9 @@ const deleteChallenge = async (req, res) => {
         });
     }
 };
-
-// Récupérer les défis actifs
 const getActiveChallenges = async (req, res) => {
     try {
         const now = new Date();
-
-        // Essayer d'abord avec l'include creator, sinon sans
         let challenges;
         try {
             challenges = await Challenge.findAll({
@@ -418,7 +364,6 @@ const getActiveChallenges = async (req, res) => {
                 ]
             });
         } catch (includeError) {
-            // Si l'include creator échoue (colonne createdBy n'existe pas), essayer sans
             console.warn("Include creator échoué, tentative sans creator:", includeError.message);
             challenges = await Challenge.findAll({
                 where: {
@@ -447,7 +392,6 @@ const getActiveChallenges = async (req, res) => {
                 ]
             });
         }
-
         res.status(200).json({
             success: true,
             data: challenges
@@ -463,7 +407,6 @@ const getActiveChallenges = async (req, res) => {
         });
     }
 };
-
 module.exports = {
     getChallenges,
     getChallengeById,
@@ -473,4 +416,3 @@ module.exports = {
     getActiveChallenges,
     getMyChallenges
 };
-

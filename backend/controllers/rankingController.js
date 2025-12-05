@@ -1,13 +1,10 @@
 const { Team, Score, Challenge, User } = require("../models");
 const { Op } = require("sequelize");
 const { Sequelize } = require("sequelize");
-
-// Récupérer le classement général
 const getRanking = async (req, res) => {
     try {
         const { limit } = req.query;
         const topLimit = limit ? parseInt(limit) : null;
-
         let teams = await Team.findAll({
             where: { isActive: true },
             order: [["totalScore", "DESC"], ["rank", "ASC"], ["id", "ASC"]],
@@ -33,13 +30,9 @@ const getRanking = async (req, res) => {
                 }
             ]
         });
-
-        // Limiter le nombre de résultats si demandé
         if (topLimit) {
             teams = teams.slice(0, topLimit);
         }
-
-        // Formater les données pour le classement
         const ranking = teams.map((team, index) => ({
             rank: team.rank || index + 1,
             team: {
@@ -53,7 +46,6 @@ const getRanking = async (req, res) => {
             validatedScores: team.scores ? team.scores.length : 0,
             lastUpdate: team.updatedAt
         }));
-
         res.status(200).json({
             success: true,
             data: ranking,
@@ -70,14 +62,10 @@ const getRanking = async (req, res) => {
         });
     }
 };
-
-// Récupérer le classement par catégorie de défi
 const getRankingByCategory = async (req, res) => {
     try {
         const { category } = req.params;
         const { limit } = req.query;
-
-        // Vérifier que la catégorie est valide
         const validCategories = ["technique", "creativite", "collaboration", "innovation", "autre"];
         if (!validCategories.includes(category)) {
             return res.status(400).json({
@@ -85,8 +73,6 @@ const getRankingByCategory = async (req, res) => {
                 message: "Catégorie invalide"
             });
         }
-
-        // Récupérer les scores validés pour cette catégorie
         const scores = await Score.findAll({
             where: { status: "validated" },
             include: [
@@ -104,8 +90,6 @@ const getRankingByCategory = async (req, res) => {
             ],
             order: [["totalPoints", "DESC"]]
         });
-
-        // Grouper par équipe et calculer le total
         const teamScores = {};
         scores.forEach(score => {
             const teamId = score.TeamId;
@@ -123,8 +107,6 @@ const getRankingByCategory = async (req, res) => {
                 date: score.validatedAt
             });
         });
-
-        // Convertir en tableau et trier
         let ranking = Object.values(teamScores)
             .map((item, index) => ({
                 rank: index + 1,
@@ -133,12 +115,9 @@ const getRankingByCategory = async (req, res) => {
                 scores: item.scores
             }))
             .sort((a, b) => b.totalScore - a.totalScore);
-
-        // Limiter si demandé
         if (limit) {
             ranking = ranking.slice(0, parseInt(limit));
         }
-
         res.status(200).json({
             success: true,
             category,
@@ -156,8 +135,6 @@ const getRankingByCategory = async (req, res) => {
         });
     }
 };
-
-// Récupérer les statistiques globales
 const getStatistics = async (req, res) => {
     try {
         const totalTeams = await Team.count({ where: { isActive: true } });
@@ -166,17 +143,12 @@ const getStatistics = async (req, res) => {
         const totalPoints = await Score.sum("totalPoints", {
             where: { status: "validated" }
         }) || 0;
-
-        // Top 3 équipes
         const topTeams = await Team.findAll({
             where: { isActive: true },
             order: [["totalScore", "DESC"]],
             limit: 3,
             attributes: ["id", "name", "color", "totalScore"]
         });
-
-        // Défis les plus populaires (par nombre de scores)
-        // Récupérer tous les défis avec leurs scores validés
         let popularChallenges = [];
         try {
             const allChallenges = await Challenge.findAll({
@@ -191,8 +163,6 @@ const getStatistics = async (req, res) => {
                 ],
                 attributes: ["id", "title", "category"]
             });
-
-            // Compter les scores pour chaque défi et trier
             popularChallenges = allChallenges
                 .map(challenge => ({
                     id: challenge.id,
@@ -204,10 +174,8 @@ const getStatistics = async (req, res) => {
                 .slice(0, 5);
         } catch (error) {
             console.error("Erreur lors de la récupération des défis populaires:", error.message);
-            // En cas d'erreur, retourner un tableau vide
             popularChallenges = [];
         }
-
         res.status(200).json({
             success: true,
             data: {
@@ -237,15 +205,11 @@ const getStatistics = async (req, res) => {
         });
     }
 };
-
-// Récupérer l'historique des classements (pour graphiques)
 const getRankingHistory = async (req, res) => {
     try {
         const { days = 30 } = req.query;
         const daysAgo = new Date();
         daysAgo.setDate(daysAgo.getDate() - parseInt(days));
-
-        // Récupérer les scores validés dans la période
         const scores = await Score.findAll({
             where: {
                 status: "validated",
@@ -265,8 +229,6 @@ const getRankingHistory = async (req, res) => {
             ],
             order: [["validatedAt", "ASC"]]
         });
-
-        // Grouper par date et équipe
         const history = {};
         scores.forEach(score => {
             const date = score.validatedAt.toISOString().split("T")[0];
@@ -282,7 +244,6 @@ const getRankingHistory = async (req, res) => {
             }
             history[date][teamId].points += score.totalPoints;
         });
-
         res.status(200).json({
             success: true,
             data: history,
@@ -303,11 +264,9 @@ const getRankingHistory = async (req, res) => {
         });
     }
 };
-
 module.exports = {
     getRanking,
     getRankingByCategory,
     getStatistics,
     getRankingHistory
 };
-

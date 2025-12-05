@@ -1,5 +1,4 @@
 const { Sequelize } = require("sequelize");
-
 const sequelize = new Sequelize(
     process.env.DB_NAME,
     process.env.DB_USER,
@@ -8,7 +7,7 @@ const sequelize = new Sequelize(
         host: process.env.DB_HOST,
         dialect: "mysql",
         port: parseInt(process.env.DB_PORT) || 3306,
-        logging: false, // Désactiver le logging SQL (trop verbeux)
+        logging: false,
         pool: {
             max: 5,
             min: 0,
@@ -17,8 +16,6 @@ const sequelize = new Sequelize(
         }
     }
 );
-
-// Test de connexion à la base de données
 sequelize.authenticate()
     .then(() => {
         console.log("✅ Connexion à la base de données MySQL réussie!");
@@ -26,5 +23,4 @@ sequelize.authenticate()
     .catch((err) => {
         console.error("❌ Erreur de connexion à la base de données:", err);
     });
-
 module.exports = sequelize;

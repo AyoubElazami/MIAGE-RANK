@@ -1,11 +1,9 @@
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
-export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
-
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http:
+export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http:
 export const STORAGE_KEYS = {
   TOKEN: 'miagerank_token',
   USER: 'miagerank_user',
 };
-
 export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
@@ -23,7 +21,6 @@ export const ROUTES = {
   SCORES_ALL: '/scores/all',
   ADMIN_SCORES: '/admin/scores',
 };
-
 export const CHALLENGE_CATEGORIES = [
   { value: 'technique', label: 'Technique' },
   { value: 'creativite', label: 'Créativité' },
@@ -31,11 +28,9 @@ export const CHALLENGE_CATEGORIES = [
   { value: 'innovation', label: 'Innovation' },
   { value: 'autre', label: 'Autre' },
 ];
-
 export const CHALLENGE_DIFFICULTIES = [
   { value: 'facile', label: 'Facile' },
   { value: 'moyen', label: 'Moyen' },
   { value: 'difficile', label: 'Difficile' },
   { value: 'expert', label: 'Expert' },
 ];
-

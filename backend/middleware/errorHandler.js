@@ -1,8 +1,6 @@
-// Gestionnaire d'erreurs centralisé
+
 const errorHandler = (err, req, res, next) => {
     console.error("Erreur:", err);
-
-    // Erreur Sequelize (base de données)
     if (err.name === "SequelizeValidationError") {
         return res.status(400).json({
             success: false,
@@ -13,7 +11,6 @@ const errorHandler = (err, req, res, next) => {
             }))
         });
     }
-
     if (err.name === "SequelizeUniqueConstraintError") {
         return res.status(409).json({
             success: false,
@@ -21,7 +18,6 @@ const errorHandler = (err, req, res, next) => {
             field: err.errors[0]?.path || "unknown"
         });
     }
-
     if (err.name === "SequelizeForeignKeyConstraintError") {
         return res.status(400).json({
             success: false,
@@ -29,23 +25,18 @@ const errorHandler = (err, req, res, next) => {
             error: err.message
         });
     }
-
-    // Erreur JWT
     if (err.name === "JsonWebTokenError") {
         return res.status(401).json({
             success: false,
             message: "Token invalide"
         });
     }
-
     if (err.name === "TokenExpiredError") {
         return res.status(401).json({
             success: false,
             message: "Token expiré"
         });
     }
-
-    // Erreur personnalisée
     if (err.statusCode) {
         return res.status(err.statusCode).json({
             success: false,
@@ -53,25 +44,19 @@ const errorHandler = (err, req, res, next) => {
             ...(err.data && { data: err.data })
         });
     }
-
-    // Erreur par défaut
     res.status(err.status || 500).json({
         success: false,
         message: err.message || "Erreur serveur interne",
         ...(process.env.NODE_ENV === "development" && { stack: err.stack })
     });
 };
-
-// Middleware pour les routes non trouvées
 const notFoundHandler = (req, res) => {
     res.status(404).json({
         success: false,
         message: `Route ${req.method} ${req.originalUrl} non trouvée`
     });
 };
-
 module.exports = {
     errorHandler,
     notFoundHandler
 };
-

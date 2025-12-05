@@ -1,6 +1,5 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
-
 const Team = sequelize.define("Team", {
     id: {
         type: DataTypes.INTEGER,
@@ -23,7 +22,7 @@ const Team = sequelize.define("Team", {
     color: {
         type: DataTypes.STRING,
         allowNull: true,
-        defaultValue: "#3B82F6", // Bleu par défaut
+        defaultValue: "#3B82F6",
         validate: {
             is: /^#[0-9A-F]{6}$/i
         }
@@ -52,11 +51,6 @@ const Team = sequelize.define("Team", {
     indexes: [
         { fields: ['totalScore'] },
         { fields: ['isActive'] }
-        // Retiré l'index sur 'rank' pour réduire le nombre d'index
     ]
 });
-
-// La synchronisation se fait dans models/index.js pour respecter l'ordre des dépendances
-
 module.exports = Team;
-
